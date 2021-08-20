@@ -23,7 +23,7 @@ type winsize struct {
 
 func init() {
 	pbParam.limit = 0
-	pbParam.step = 0
+	pbParam.step = 1
 	pbParam.value = 0
 }
 
@@ -49,34 +49,39 @@ func SetStep(step int) {
 }
 
 func Increment() {
-	pbParam.value += pbParam.step
-	Print()
+	if pbParam.value < pbParam.limit {
+		pbParam.value += pbParam.step
+	}
+
+	DrawProgressBar()
 }
 
 func SetValue(value int) {
 	pbParam.value = value
-	Print()
+	DrawProgressBar()
 }
 
 func Value() int {
 	return pbParam.value
 }
 
-func WriteText(text string) {
-	str := strings.Trim(text, "\t\n ")
-	for getWidth() > runewidth.StringWidth(str) {
-		str += " "
-	}
-	fmt.Println("\r" + str)
-	Print()
+func Pos() int {
+	return pbParam.value * 100 / pbParam.limit
 }
 
-func Print() {
+func WriteText(text string) {
+	str := strings.Trim(text, "\t\n ")
+	clr := fmt.Sprintf("\r%*s", getWidth()/runewidth.StringWidth(" "), " ")
+	fmt.Printf("%s\r%s\n", clr, str)
+	DrawProgressBar()
+}
+
+func DrawProgressBar() {
 	if pbParam.value > pbParam.limit {
-		return
+		pbParam.value = pbParam.limit
 	}
 	percent := pbParam.value * 100 / pbParam.limit
-	pbwidth := getWidth() - runewidth.StringWidth(fmt.Sprintf("%v/%v [] 100/%", pbParam.value, pbParam.limit))
+	pbwidth := getWidth() - runewidth.StringWidth(fmt.Sprintf("%v/%v [] 100###", pbParam.value, pbParam.limit))
 	l := int(float32(percent) / 100.0 * float32(pbwidth))
 	pb := ""
 	for ii := 0; ii < l; ii++ {
