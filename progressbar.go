@@ -75,6 +75,9 @@ func Pos() int {
 }
 
 func WriteText(text string) {
+	if text == "" {
+		return
+	}
 	str := strings.Trim(text, "\t\n ")
 	clr := fmt.Sprintf("\r%*s", getWidth()/runewidth.StringWidth(" "), " ")
 	fmt.Printf("%s\r%s\n", clr, str)
