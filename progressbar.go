@@ -2,10 +2,11 @@ package progressbar
 
 import (
 	"fmt"
-	"github.com/mattn/go-runewidth"
 	"strings"
 	"syscall"
 	"unsafe"
+
+	"github.com/mattn/go-runewidth"
 )
 
 var pbParam struct {
@@ -42,6 +43,10 @@ func getWidth() int {
 
 func SetMax(max int) {
 	pbParam.limit = max
+}
+
+func GetMax() int {
+	return pbParam.limit
 }
 
 func SetStep(step int) {
