@@ -88,7 +88,12 @@ func DrawProgressBar() {
 	if pbParam.value > pbParam.limit {
 		pbParam.value = pbParam.limit
 	}
-	percent := pbParam.value * 100 / pbParam.limit
+	var percent int
+	if pbParam.limit == 0 {
+		percent = 100
+	} else {
+		percent = pbParam.value * 100 / pbParam.limit
+	}
 	pbwidth := getWidth() - runewidth.StringWidth(fmt.Sprintf("%v/%v [] 100###", pbParam.value, pbParam.limit))
 	l := int(float32(percent) / 100.0 * float32(pbwidth))
 	pb := ""
