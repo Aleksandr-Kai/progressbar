@@ -117,6 +117,8 @@ func Pos() int {
 }
 
 func WriteText(text string) {
+	pbParam.mu.Lock()
+	defer pbParam.mu.Unlock()
 	if pbParam.current == nil {
 		fmt.Println(text)
 		return
