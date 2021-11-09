@@ -129,7 +129,7 @@ func WriteText(text string) {
 	str := strings.Trim(text, "\t\n ")
 	clr := fmt.Sprintf("\r%*s", getWidth()/runewidth.StringWidth(" "), " ")
 	fmt.Printf("%s\r%s\n", clr, str)
-	if pbParam.interval > time.Millisecond*500 {
+	if pbParam.interval > time.Millisecond*100 {
 		DrawProgressBar()
 	}
 }
