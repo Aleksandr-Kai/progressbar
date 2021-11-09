@@ -3,16 +3,25 @@ package progressbar
 import (
 	"fmt"
 	"strings"
+	"sync"
 	"syscall"
+	"time"
 	"unsafe"
 
 	"github.com/mattn/go-runewidth"
 )
 
+const (
+	minInterval = time.Millisecond * 100
+)
+
 var pbParam struct {
-	limit int
-	step  int
-	value int
+	limit    int
+	step     int
+	value    int
+	interval time.Duration
+	current  *time.Timer
+	mu       sync.Mutex
 }
 
 type winsize struct {
@@ -41,8 +50,37 @@ func getWidth() int {
 	return int(ws.Col)
 }
 
+func start() {
+	if pbParam.interval > time.Second || pbParam.interval < minInterval {
+		pbParam.interval = minInterval
+	}
+	pbParam.current = time.AfterFunc(time.Millisecond, func() {
+		pbParam.current.Reset(pbParam.interval)
+		DrawProgressBar()
+	})
+}
+
+func Break() {
+	if pbParam.current == nil {
+		return
+	}
+	pbParam.current.Stop()
+	fmt.Println()
+}
+
+func SetInterval(interval time.Duration) error {
+	if interval < minInterval {
+		return fmt.Errorf("interval must be greater then %v", minInterval)
+	}
+	return nil
+}
+
 func SetMax(max int) {
 	pbParam.limit = max
+	if pbParam.current != nil {
+		pbParam.current.Stop()
+	}
+	start()
 }
 
 func GetMax() int {
@@ -54,16 +92,20 @@ func SetStep(step int) {
 }
 
 func Increment() {
+	pbParam.mu.Lock()
+	defer pbParam.mu.Unlock()
 	if pbParam.value < pbParam.limit {
 		pbParam.value += pbParam.step
 	}
-
-	DrawProgressBar()
 }
 
 func SetValue(value int) {
+	pbParam.mu.Lock()
+	defer pbParam.mu.Unlock()
+	if value > pbParam.limit {
+		return
+	}
 	pbParam.value = value
-	DrawProgressBar()
 }
 
 func Value() int {
@@ -75,13 +117,19 @@ func Pos() int {
 }
 
 func WriteText(text string) {
+	if pbParam.current == nil {
+		fmt.Println(text)
+		return
+	}
 	if text == "" {
 		return
 	}
 	str := strings.Trim(text, "\t\n ")
 	clr := fmt.Sprintf("\r%*s", getWidth()/runewidth.StringWidth(" "), " ")
 	fmt.Printf("%s\r%s\n", clr, str)
-	DrawProgressBar()
+	if pbParam.interval > time.Millisecond*500 {
+		DrawProgressBar()
+	}
 }
 
 func DrawProgressBar() {
@@ -104,4 +152,7 @@ func DrawProgressBar() {
 		pb += "\u2591"
 	}
 	fmt.Printf("\r%v/%v [%s] %3d%%  ", pbParam.value, pbParam.limit, pb, percent)
+	if pbParam.value == pbParam.limit {
+		Break()
+	}
 }
