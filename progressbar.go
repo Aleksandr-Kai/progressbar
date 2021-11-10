@@ -65,8 +65,10 @@ func Break() {
 	if params.current == nil {
 		return
 	}
-	params.current.Reset(time.Microsecond)
 	params.current.Stop()
+	params.current = nil
+	DrawProgressBar()
+
 	fmt.Println()
 }
 
@@ -128,17 +130,7 @@ func WriteText(text string) {
 		return
 	}
 
-	//sb := strings.Builder{}
-	//sb.WriteString(text)
-	//w := getWidth()
-	//sbw := runewidth.StringWidth(sb.String())
-	//for sbw < w {
-	//	sb.WriteString(" ")
-	//	sbw = runewidth.StringWidth(sb.String())
-	//}
-	//sb.WriteString("\n")
 	params.mu.Lock()
-	//params.texts.WriteString(sb.String())
 	params.texts.WriteString(text + "\n")
 	params.mu.Unlock()
 }
@@ -163,7 +155,6 @@ func DrawProgressBar() {
 		pb += "\u2591"
 	}
 	params.mu.Lock()
-	//fmt.Printf("\r%s%v/%v [%s] %3d%%  ", params.texts.String(), params.value, params.limit, pb, percent)
 	fmt.Printf("\r\u001B[K%s%v/%v [%s] %3d%%  ", params.texts.String(), params.value, params.limit, pb, percent)
 	params.texts.Reset()
 	params.mu.Unlock()
