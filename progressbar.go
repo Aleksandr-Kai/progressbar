@@ -65,6 +65,7 @@ func Break() {
 	if params.current == nil {
 		return
 	}
+	params.current.Reset(time.Microsecond)
 	params.current.Stop()
 	fmt.Println()
 }
@@ -73,6 +74,7 @@ func SetInterval(interval time.Duration) error {
 	if interval < minInterval {
 		return fmt.Errorf("interval must be greater then %v", minInterval)
 	}
+	params.interval = interval
 	return nil
 }
 
