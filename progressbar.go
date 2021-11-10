@@ -15,13 +15,14 @@ const (
 	minInterval = time.Millisecond * 100
 )
 
-var pbParam struct {
+var params struct {
 	limit    int
 	step     int
 	value    int
 	interval time.Duration
 	current  *time.Timer
 	mu       sync.Mutex
+	texts    strings.Builder
 }
 
 type winsize struct {
@@ -32,9 +33,9 @@ type winsize struct {
 }
 
 func init() {
-	pbParam.limit = 0
-	pbParam.step = 1
-	pbParam.value = 0
+	params.limit = 0
+	params.step = 1
+	params.value = 0
 }
 
 func getWidth() int {
@@ -51,20 +52,20 @@ func getWidth() int {
 }
 
 func start() {
-	if pbParam.interval > time.Second || pbParam.interval < minInterval {
-		pbParam.interval = minInterval
+	if params.interval > time.Second || params.interval < minInterval {
+		params.interval = minInterval
 	}
-	pbParam.current = time.AfterFunc(time.Millisecond, func() {
-		pbParam.current.Reset(pbParam.interval)
+	params.current = time.AfterFunc(time.Millisecond, func() {
+		params.current.Reset(params.interval)
 		DrawProgressBar()
 	})
 }
 
 func Break() {
-	if pbParam.current == nil {
+	if params.current == nil {
 		return
 	}
-	pbParam.current.Stop()
+	params.current.Stop()
 	fmt.Println()
 }
 
@@ -76,75 +77,81 @@ func SetInterval(interval time.Duration) error {
 }
 
 func SetMax(max int) {
-	pbParam.limit = max
-	if pbParam.current != nil {
-		pbParam.current.Stop()
+	params.limit = max
+	if params.current != nil {
+		params.current.Stop()
 	}
 	start()
 }
 
 func GetMax() int {
-	return pbParam.limit
+	return params.limit
 }
 
 func SetStep(step int) {
-	pbParam.step = step
+	params.step = step
 }
 
 func Increment() {
-	pbParam.mu.Lock()
-	defer pbParam.mu.Unlock()
-	if pbParam.value < pbParam.limit {
-		pbParam.value += pbParam.step
+	params.mu.Lock()
+	defer params.mu.Unlock()
+	if params.value < params.limit {
+		params.value += params.step
 	}
 }
 
 func SetValue(value int) {
-	pbParam.mu.Lock()
-	defer pbParam.mu.Unlock()
-	if value > pbParam.limit {
+	params.mu.Lock()
+	defer params.mu.Unlock()
+	if value > params.limit {
 		return
 	}
-	pbParam.value = value
+	params.value = value
 }
 
 func Value() int {
-	return pbParam.value
+	return params.value
 }
 
 func Pos() int {
-	return pbParam.value * 100 / pbParam.limit
+	return params.value * 100 / params.limit
 }
 
 func WriteText(text string) {
-	pbParam.mu.Lock()
-	defer pbParam.mu.Unlock()
-	if pbParam.current == nil {
+	if params.current == nil {
 		fmt.Println(text)
 		return
 	}
 	if text == "" {
 		return
 	}
-	str := strings.Trim(text, "\t\n ")
-	clr := fmt.Sprintf("\r%*s", getWidth()/runewidth.StringWidth(" "), " ")
-	fmt.Printf("%s\r%s\n", clr, str)
-	if pbParam.interval > time.Millisecond*100 {
-		DrawProgressBar()
-	}
+
+	//sb := strings.Builder{}
+	//sb.WriteString(text)
+	//w := getWidth()
+	//sbw := runewidth.StringWidth(sb.String())
+	//for sbw < w {
+	//	sb.WriteString(" ")
+	//	sbw = runewidth.StringWidth(sb.String())
+	//}
+	//sb.WriteString("\n")
+	params.mu.Lock()
+	//params.texts.WriteString(sb.String())
+	params.texts.WriteString(text + "\n")
+	params.mu.Unlock()
 }
 
 func DrawProgressBar() {
-	if pbParam.value > pbParam.limit {
-		pbParam.value = pbParam.limit
+	if params.value > params.limit {
+		params.value = params.limit
 	}
 	var percent int
-	if pbParam.limit == 0 {
+	if params.limit == 0 {
 		percent = 100
 	} else {
-		percent = pbParam.value * 100 / pbParam.limit
+		percent = params.value * 100 / params.limit
 	}
-	pbwidth := getWidth() - runewidth.StringWidth(fmt.Sprintf("%v/%v [] 100###", pbParam.value, pbParam.limit))
+	pbwidth := getWidth() - runewidth.StringWidth(fmt.Sprintf("%v/%v [] 100###", params.limit, params.limit))
 	l := int(float32(percent) / 100.0 * float32(pbwidth))
 	pb := ""
 	for ii := 0; ii < l; ii++ {
@@ -153,8 +160,12 @@ func DrawProgressBar() {
 	for pbwidth > runewidth.StringWidth(pb) {
 		pb += "\u2591"
 	}
-	fmt.Printf("\r%v/%v [%s] %3d%%  ", pbParam.value, pbParam.limit, pb, percent)
-	if pbParam.value == pbParam.limit {
+	params.mu.Lock()
+	//fmt.Printf("\r%s%v/%v [%s] %3d%%  ", params.texts.String(), params.value, params.limit, pb, percent)
+	fmt.Printf("\r\u001B[K%s%v/%v [%s] %3d%%  ", params.texts.String(), params.value, params.limit, pb, percent)
+	params.texts.Reset()
+	params.mu.Unlock()
+	if params.value == params.limit {
 		Break()
 	}
 }
